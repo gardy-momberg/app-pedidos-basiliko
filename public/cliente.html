@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seguimiento de Pedidos</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .thumbnail {
+      height: 120px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .pendiente {
+      background-color: orange;
+    }
+
+    .preparacion {
+      background-color: green;
+    }
+
+    .entregado {
+      background-color: blue;
+    }
+
+    .estado-badge {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: 6px;
+      font-size: 14px;
+      background-color: rgba(0,0,0,0.2);
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+    }
+
+    button {
+      display: block;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:active {
+      background-color: #222;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Seguimiento de Pedidos</h1>
+  <button onclick="cargarPedidos()">Actualizar</button>
+
+  <div class="grid" id="contenedor-pedidos"></div>
+
+  <script>
+    async function cargarPedidos() {
+      const res = await fetch('/api/pedidos');
+      const pedidos = await res.json();
+
+      const contenedor = document.getElementById('contenedor-pedidos');
+      contenedor.innerHTML = '';
+
+      pedidos.forEach(pedido => {
+        const div = document.createElement('div');
+        div.className = `thumbnail ${pedido.estado}`;
+        div.innerHTML = `
+          <div style="z-index: 1;">#${pedido.id}</div>
+          <div class="estado-badge">${pedido.estado}</div>
+        `;
+        contenedor.appendChild(div);
+      });
+    }
+
+    cargarPedidos();
+    setInterval(cargarPedidos, 10000);
+  </script>
+
+</body>
+</html>

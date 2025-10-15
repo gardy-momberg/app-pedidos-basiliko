@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tomar Pedido</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .productos {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .producto {
+      padding: 12px;
+      background-color: #f0f0f0;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+
+    .producto:active {
+      background-color: #ddd;
+    }
+
+    .carrito {
+      margin-bottom: 20px;
+    }
+
+    .carrito li {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+
+    .boton {
+      width: 100%;
+      padding: 14px;
+      background-color: #007bff;
+      color: white;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .boton:active {
+      background-color: #0056b3;
+    }
+
+    .total {
+      text-align: right;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .eliminar {
+      background: none;
+      border: none;
+      color: red;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tomar Pedido</h1>
+
+  <div class="productos">
+    <div class="producto" onclick="agregar('Pizza Margherita', 10)">🍕 Margherita</div>
+    <div class="producto" onclick="agregar('Pizza Pepperoni', 12)">🍕 Pepperoni</div>
+    <div class="producto" onclick="agregar('Calzone', 11)">🥟 Calzone</div>
+    <div class="producto" onclick="agregar('Agua Mineral', 3)">🥤 Agua</div>
+  </div>
+
+  <ul class="carrito" id="lista-carrito"></ul>
+  <div class="total" id="total"></div>
+
+  <button class="boton" onclick="enviarPedido()">Hacer Pedido</button>
+  <button class="boton" id="btn-limpiar" style="display:none;" onclick="limpiarCarrito()">🧹 Limpiar Carrito</button>
+
+  <script>
+    const carrito = [];
+
+    function agregar(nombre, precio) {
+      carrito.push({ nombre, precio });
+      renderCarrito();
+    }
+
+    function eliminar(index) {
+      carrito.splice(index, 1);
+      renderCarrito();
+    }
+
+    function limpiarCarrito() {
+      if (carrito.length === 0) return;
+      if (confirm("¿Estás seguro de que quieres vaciar el carrito?")) {
+        carrito.length = 0;
+        renderCarrito();
+      }
+    }
+
+    function renderCarrito() {
+      const lista = document.getElementById('lista-carrito');
+      const total = document.getElementById('total');
+      const botonLimpiar = document.getElementById('btn-limpiar');
+      lista.innerHTML = '';
+      let suma = 0;
+
+      carrito.forEach((p, i) => {
+        suma += p.precio;
+        const li = document.createElement('li');
+        li.innerHTML = `
+          ${p.nombre} - $${p.precio}
+          <button class="eliminar" onclick="eliminar(${i})">✕</button>
+        `;
+        lista.appendChild(li);
+      });
+
+      total.textContent = `Total: $${suma}`;
+      botonLimpiar.style.display = carrito.length > 0 ? 'block' : 'none';
+    }
+
+    function enviarPedido() {
+      if (carrito.length === 0) {
+        alert('El carrito está vacío.');
+        return;
+      }
+
+      fetch('/api/pedido', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productos: carrito })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert('Pedido enviado con éxito. N°: ' + data.pedidoId);
+        carrito.length = 0;
+        renderCarrito();
+      })
+      .catch(err => {
+        alert('Error al enviar el pedido.');
+        console.error(err);
+      });
+    }
+  </script>
+
+</body>
+</html>

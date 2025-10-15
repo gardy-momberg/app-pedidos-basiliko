@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedidos - Cocina</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .pedido {
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      background: #f9f9f9;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.05);
+      transition: background 0.3s;
+    }
+
+    .pedido.entregado {
+      background-color: #e0e0e0;
+    }
+
+    .pedido h2 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+    }
+
+    .estado {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #444;
+    }
+
+    .acciones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      color: white;
+    }
+
+    .btn.preparacion {
+      background-color: #28a745;
+    }
+
+    .btn.entregado {
+      background-color: #007bff;
+    }
+
+    @media (min-width: 600px) {
+      .pedido {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .pedido h2 {
+        font-size: 20px;
+      }
+
+      .estado {
+        margin-bottom: 0;
+      }
+
+      .acciones {
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Panel de Cocina</h1>
+  <div id="contenedor-pedidos"></div>
+
+  <script>
+    async function cargarPedidos() {
+      const res = await fetch('/api/pedidos');
+      const pedidos = await res.json();
+
+      const contenedor = document.getElementById('contenedor-pedidos');
+      contenedor.innerHTML = '';
+
+      pedidos.forEach(pedido => {
+        const div = document.createElement('div');
+        div.className = 'pedido';
+        if (pedido.estado === 'entregado') {
+          div.classList.add('entregado');
+        }
+
+        const botones = pedido.estado !== 'entregado' ? `
+          <div class="acciones">
+            <button class="btn preparacion" onclick="actualizarEstado(${pedido.id}, 'preparacion')">Preparar</button>
+            <button class="btn entregado" onclick="actualizarEstado(${pedido.id}, 'entregado')">Entregar</button>
+          </div>
+        ` : '';
+
+        div.innerHTML = `
+          <div>
+            <h2>Pedido #${pedido.id}</h2>
+            <div class="estado">Estado: ${pedido.estado}</div>
+          </div>
+          ${botones}
+        `;
+
+        contenedor.appendChild(div);
+      });
+    }
+
+    async function actualizarEstado(id, estado) {
+      await fetch(`/api/pedido/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado })
+      });
+      cargarPedidos();
+    }
+
+    cargarPedidos();
+    setInterval(cargarPedidos, 10000); // auto-refresh cada 10s
+  </script>
+
+</body>
+</html>
