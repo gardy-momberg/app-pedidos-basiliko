@@ -1,14 +1,18 @@
 require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
+const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configurar middleware
-app.use(express.static('public'));
+// Middleware
 app.use(express.json());
 
-// Crear pool de conexión con PostgreSQL
+// Archivos estáticos: HTML, CSS, imágenes
+app.use(express.static(path.join(__dirname, 'public')));
+
+// PostgreSQL Pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
@@ -18,6 +22,7 @@ const pool = new Pool({
 pool.query(`
   CREATE TABLE IF NOT EXISTS pedidos (
     id SERIAL PRIMARY KEY,
+    cliente TEXT NOT NULL,
     estado TEXT DEFAULT 'pendiente'
   );
 
@@ -29,21 +34,29 @@ pool.query(`
   );
 `).catch(err => console.error('❌ Error al crear tablas:', err));
 
-// Endpoint: Crear nuevo pedido
+// Crear nuevo pedido
 app.post('/api/pedido', async (req, res) => {
-  const { productos } = req.body;
+  const { cliente, productos } = req.body;
+
+  if (!cliente?.trim()) return res.status(400).json({ error: 'Falta el nombre del cliente' });
   if (!productos?.length) return res.status(400).json({ error: 'Carrito vacío' });
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const pedidoRes = await client.query(`INSERT INTO pedidos (estado) VALUES ('pendiente') RETURNING id`);
+
+    const pedidoRes = await client.query(
+      `INSERT INTO pedidos (cliente, estado) VALUES ($1, 'Pendiente') RETURNING id`,
+      [cliente]
+    );
+
     const pedidoId = pedidoRes.rows[0].id;
 
     const insertProducto = `
       INSERT INTO productos_pedido (pedido_id, nombre_producto, precio)
       VALUES ($1, $2, $3)
     `;
+
     for (const p of productos) {
       await client.query(insertProducto, [pedidoId, p.nombre, p.precio]);
     }
@@ -59,11 +72,17 @@ app.post('/api/pedido', async (req, res) => {
   }
 });
 
-// Endpoint: Obtener todos los pedidos
+// Obtener todos los pedidos
 app.get('/api/pedidos', async (_req, res) => {
   try {
     const pedidos = await pool.query(`
-      SELECT p.id, p.estado, json_agg(json_build_object('nombre', pp.nombre_producto, 'precio', pp.precio)) AS productos
+      SELECT 
+        p.id, 
+        p.cliente,
+        p.estado, 
+        json_agg(
+          json_build_object('nombre', pp.nombre_producto, 'precio', pp.precio)
+        ) AS productos
       FROM pedidos p
       LEFT JOIN productos_pedido pp ON p.id = pp.pedido_id
       GROUP BY p.id
@@ -76,12 +95,13 @@ app.get('/api/pedidos', async (_req, res) => {
   }
 });
 
-// Endpoint: Cambiar estado de pedido
+// Cambiar estado de pedido
 app.put('/api/pedido/:id', async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
 
-  const estadosValidos = ['pendiente', 'preparacion', 'entregado'];
+const estadosValidos = ['Pendiente', 'En preparación', 'Preparado'];
+
   if (!estadosValidos.includes(estado)) {
     return res.status(400).json({ error: 'Estado inválido' });
   }
@@ -93,6 +113,11 @@ app.put('/api/pedido/:id', async (req, res) => {
     console.error('❌ Error al cambiar estado:', err);
     res.status(500).json({ error: 'Error al cambiar estado' });
   }
+});
+
+// 🏠 Ruta principal (sirve el HTML desde public/index.html)
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Iniciar servidor

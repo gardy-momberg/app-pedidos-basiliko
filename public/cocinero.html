@@ -8,41 +8,50 @@
     body {
       font-family: sans-serif;
       margin: 20px;
+      background-color: #f5faff;
     }
 
     h1 {
       text-align: center;
+      color: #0077b6;
     }
 
     .pedido {
-      border: 2px solid #ccc;
+      border: 2px solid #d0e7ff;
       border-radius: 12px;
       padding: 15px;
       margin-bottom: 15px;
-      background: #f9f9f9;
-      box-shadow: 2px 2px 8px rgba(0,0,0,0.05);
-      transition: background 0.3s;
+      background: #ffffff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      transition: background 0.3s, transform 0.2s;
     }
 
-    .pedido.entregado {
+    .pedido:hover {
+      transform: scale(1.01);
+    }
+
+    .pedido.preparado {
       background-color: #e0e0e0;
+      border-color: #b0b0b0;
     }
 
     .pedido h2 {
       margin: 0 0 8px 0;
       font-size: 18px;
+      color: #333;
     }
 
     .estado {
       font-weight: bold;
       margin-bottom: 10px;
-      color: #444;
+      color: #555;
     }
 
     .acciones {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
+      margin-top: 10px;
     }
 
     .btn {
@@ -53,14 +62,30 @@
       font-size: 16px;
       cursor: pointer;
       color: white;
+      transition: background 0.3s;
     }
 
     .btn.preparacion {
       background-color: #28a745;
     }
 
-    .btn.entregado {
+    .btn.preparacion:hover {
+      background-color: #218838;
+    }
+
+    .btn.preparado {
       background-color: #007bff;
+    }
+
+    .btn.preparado:hover {
+      background-color: #0056b3;
+    }
+
+    .detalle {
+      margin-top: 10px;
+      font-size: 15px;
+      color: #444;
+      line-height: 1.4em;
     }
 
     @media (min-width: 600px) {
@@ -70,15 +95,12 @@
         align-items: center;
       }
 
-      .pedido h2 {
-        font-size: 20px;
-      }
-
-      .estado {
-        margin-bottom: 0;
+      .contenido {
+        flex: 2;
       }
 
       .acciones {
+        flex: 1;
         justify-content: flex-end;
       }
     }
@@ -86,7 +108,7 @@
 </head>
 <body>
 
-  <h1>Panel de Cocina</h1>
+  <h1>👨‍🍳 Panel de Cocina</h1>
   <div id="contenedor-pedidos"></div>
 
   <script>
@@ -100,21 +122,30 @@
       pedidos.forEach(pedido => {
         const div = document.createElement('div');
         div.className = 'pedido';
-        if (pedido.estado === 'entregado') {
-          div.classList.add('entregado');
-        }
+        if (pedido.estado === 'Preparado') div.classList.add('preparado');
 
-        const botones = pedido.estado !== 'entregado' ? `
+        const productos = pedido.productos || [];
+        const nombres = productos.map(p => p.nombre).join(', ');
+        const totalItems = productos.length;
+        const cliente = pedido.cliente || '—';
+
+        // Mostrar botones solo si no está "Preparado"
+        const botones = pedido.estado !== 'Preparado' ? `
           <div class="acciones">
-            <button class="btn preparacion" onclick="actualizarEstado(${pedido.id}, 'preparacion')">Preparar</button>
-            <button class="btn entregado" onclick="actualizarEstado(${pedido.id}, 'entregado')">Entregar</button>
+            <button class="btn preparacion" onclick="actualizarEstado(${pedido.id}, 'En preparación')">En preparación</button>
+            <button class="btn preparado" onclick="actualizarEstado(${pedido.id}, 'Preparado')">Preparado</button>
           </div>
         ` : '';
 
         div.innerHTML = `
-          <div>
+          <div class="contenido">
             <h2>Pedido #${pedido.id}</h2>
             <div class="estado">Estado: ${pedido.estado}</div>
+            <div class="detalle">
+              👤 Cliente: <strong>${cliente}</strong><br>
+              🍕 Cantidad: <strong>${totalItems}</strong><br>
+              📝 Productos: ${nombres || '—'}
+            </div>
           </div>
           ${botones}
         `;
@@ -133,7 +164,7 @@
     }
 
     cargarPedidos();
-    setInterval(cargarPedidos, 10000); // auto-refresh cada 10s
+    setInterval(cargarPedidos, 10000); // auto-actualiza cada 10s
   </script>
 
 </body>
