@@ -42,6 +42,10 @@
       transition: background 0.2s;
     }
 
+    .producto:hover {
+      background-color: #e0e0e0;
+    }
+
     .producto:active {
       background-color: #ddd;
     }
@@ -94,13 +98,12 @@
   <!-- 🧑 Campo nombre del cliente -->
   <input type="text" id="nombre-cliente" placeholder="Nombre del cliente..." />
 
-  <div class="productos">
-    <div class="producto" onclick="agregar('Pizza Margherita', 10)">🍕 Margherita</div>
-    <div class="producto" onclick="agregar('Pizza Pepperoni', 12)">🍕 Pepperoni</div>
-    <div class="producto" onclick="agregar('Calzone', 11)">🥟 Calzone</div>
-    <div class="producto" onclick="agregar('Agua Mineral', 3)">🥤 Agua</div>
+  <!-- 📦 Productos cargados desde la base de datos -->
+  <div class="productos" id="lista-productos">
+    <p>Cargando productos...</p>
   </div>
 
+  <!-- 🛒 Carrito -->
   <ul class="carrito" id="lista-carrito"></ul>
   <div class="total" id="total"></div>
 
@@ -109,6 +112,26 @@
 
   <script>
     const carrito = [];
+
+    async function cargarProductos() {
+      try {
+        const res = await fetch('/api/productos');
+        const productos = await res.json();
+        const contenedor = document.getElementById('lista-productos');
+        contenedor.innerHTML = '';
+
+        productos.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'producto';
+          div.textContent = `${p.nombre} - $${p.precio}`;
+          div.onclick = () => agregar(p.nombre, p.precio);
+          contenedor.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById('lista-productos').innerHTML = '<p>Error al cargar productos.</p>';
+        console.error(err);
+      }
+    }
 
     function agregar(nombre, precio) {
       carrito.push({ nombre, precio });
@@ -181,7 +204,9 @@
         console.error(err);
       });
     }
-  </script>
 
+    // Inicializar
+    cargarProductos();
+  </script>
 </body>
 </html>

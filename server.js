@@ -8,8 +8,6 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
-
-// Archivos estáticos: HTML, CSS, imágenes
 app.use(express.static(path.join(__dirname, 'public')));
 
 // PostgreSQL Pool
@@ -32,12 +30,77 @@ pool.query(`
     nombre_producto TEXT,
     precio REAL
   );
+
+  CREATE TABLE IF NOT EXISTS productos (
+    id SERIAL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    precio REAL NOT NULL
+  );
 `).catch(err => console.error('❌ Error al crear tablas:', err));
 
-// Crear nuevo pedido
+// 📌 CRUD PRODUCTOS
+
+// Obtener todos los productos
+app.get('/api/productos', async (_req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM productos ORDER BY id');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ Error al obtener productos:', err);
+    res.status(500).json({ error: 'Error al obtener productos' });
+  }
+});
+
+// Crear producto
+app.post('/api/productos', async (req, res) => {
+  const { nombre, precio } = req.body;
+  if (!nombre || precio == null) return res.status(400).json({ error: 'Faltan datos' });
+
+  try {
+    await pool.query(
+      'INSERT INTO productos (nombre, precio) VALUES ($1, $2)',
+      [nombre, precio]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Error al agregar producto:', err);
+    res.status(500).json({ error: 'Error al agregar producto' });
+  }
+});
+
+// Actualizar producto
+app.put('/api/productos/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nombre, precio } = req.body;
+  if (!nombre || precio == null) return res.status(400).json({ error: 'Faltan datos' });
+
+  try {
+    await pool.query(
+      'UPDATE productos SET nombre = $1, precio = $2 WHERE id = $3',
+      [nombre, precio, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Error al actualizar producto:', err);
+    res.status(500).json({ error: 'Error al actualizar producto' });
+  }
+});
+
+// Eliminar producto
+app.delete('/api/productos/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM productos WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Error al eliminar producto:', err);
+    res.status(500).json({ error: 'Error al eliminar producto' });
+  }
+});
+
+// 📦 CREAR PEDIDO
 app.post('/api/pedido', async (req, res) => {
   const { cliente, productos } = req.body;
-
   if (!cliente?.trim()) return res.status(400).json({ error: 'Falta el nombre del cliente' });
   if (!productos?.length) return res.status(400).json({ error: 'Carrito vacío' });
 
@@ -49,7 +112,6 @@ app.post('/api/pedido', async (req, res) => {
       `INSERT INTO pedidos (cliente, estado) VALUES ($1, 'Pendiente') RETURNING id`,
       [cliente]
     );
-
     const pedidoId = pedidoRes.rows[0].id;
 
     const insertProducto = `
@@ -72,7 +134,7 @@ app.post('/api/pedido', async (req, res) => {
   }
 });
 
-// Obtener todos los pedidos
+// 🧾 Obtener todos los pedidos
 app.get('/api/pedidos', async (_req, res) => {
   try {
     const pedidos = await pool.query(`
@@ -95,12 +157,12 @@ app.get('/api/pedidos', async (_req, res) => {
   }
 });
 
-// Cambiar estado de pedido
+// 🔄 Cambiar estado de pedido
 app.put('/api/pedido/:id', async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
 
-const estadosValidos = ['Pendiente', 'En preparación', 'Preparado'];
+  const estadosValidos = ['Pendiente', 'En preparación', 'Preparado'];
 
   if (!estadosValidos.includes(estado)) {
     return res.status(400).json({ error: 'Estado inválido' });
@@ -115,12 +177,12 @@ const estadosValidos = ['Pendiente', 'En preparación', 'Preparado'];
   }
 });
 
-// 🏠 Ruta principal (sirve el HTML desde public/index.html)
+// 🏠 Página principal
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Iniciar servidor
+// 🚀 Iniciar servidor
 app.listen(PORT, () => {
   console.log(`✅ Servidor escuchando en http://localhost:${PORT}`);
 });

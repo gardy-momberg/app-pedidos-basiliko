@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestión de Productos</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background: #f4faff;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    td input {
+      width: 100%;
+      padding: 6px;
+    }
+
+    .acciones button {
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛒 Gestión de Productos</h1>
+
+  <form id="form-producto">
+    <input type="text" id="nombre" placeholder="Nombre del producto" required />
+    <input type="number" step="0.01" id="precio" placeholder="Precio" required />
+    <button type="submit">Agregar Producto</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Precio</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="lista-productos"></tbody>
+  </table>
+
+  <script>
+    async function cargarProductos() {
+      const res = await fetch('/api/productos');
+      const data = await res.json();
+
+      const tbody = document.getElementById('lista-productos');
+      tbody.innerHTML = '';
+
+      data.forEach(prod => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="text" value="${prod.nombre}" id="nombre-${prod.id}" /></td>
+          <td><input type="number" step="0.01" value="${prod.precio}" id="precio-${prod.id}" /></td>
+          <td class="acciones">
+            <button onclick="actualizar(${prod.id})">💾</button>
+            <button onclick="eliminar(${prod.id})">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function agregarProducto(nombre, precio) {
+      await fetch('/api/productos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, precio })
+      });
+      cargarProductos();
+    }
+
+    async function actualizar(id) {
+      const nombre = document.getElementById(`nombre-${id}`).value;
+      const precio = parseFloat(document.getElementById(`precio-${id}`).value);
+      await fetch(`/api/productos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, precio })
+      });
+      cargarProductos();
+    }
+
+    async function eliminar(id) {
+      if (!confirm('¿Eliminar producto?')) return;
+      await fetch(`/api/productos/${id}`, { method: 'DELETE' });
+      cargarProductos();
+    }
+
+    document.getElementById('form-producto').addEventListener('submit', e => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombre').value;
+      const precio = parseFloat(document.getElementById('precio').value);
+      agregarProducto(nombre, precio);
+      e.target.reset();
+    });
+
+    cargarProductos();
+  </script>
+</body>
+</html>
