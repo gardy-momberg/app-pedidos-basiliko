@@ -141,13 +141,16 @@ app.get('/api/pedidos', async (_req, res) => {
       SELECT 
         p.id, 
         p.cliente,
-        p.estado, 
+        p.estado,
+        p.fecha_pedido,
+        p.fecha_preparacion,
+        p.fecha_terminado,
         json_agg(
           json_build_object('nombre', pp.nombre_producto, 'precio', pp.precio)
         ) AS productos
       FROM pedidos p
       LEFT JOIN productos_pedido pp ON p.id = pp.pedido_id
-      GROUP BY p.id
+      GROUP BY p.id, p.cliente, p.estado, p.fecha_pedido, p.fecha_preparacion, p.fecha_terminado
       ORDER BY p.id DESC
     `);
     res.json(pedidos.rows);
@@ -157,19 +160,31 @@ app.get('/api/pedidos', async (_req, res) => {
   }
 });
 
+
 // 🔄 Cambiar estado de pedido
 app.put('/api/pedido/:id', async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
 
   const estadosValidos = ['Pendiente', 'En preparación', 'Preparado'];
-
   if (!estadosValidos.includes(estado)) {
     return res.status(400).json({ error: 'Estado inválido' });
   }
 
+  let query = `UPDATE pedidos SET estado = $1`;
+  const params = [estado];
+
+  if (estado === 'En preparación') {
+    query += `, fecha_preparacion = CURRENT_TIMESTAMP`;
+  } else if (estado === 'Preparado') {
+    query += `, fecha_terminado = CURRENT_TIMESTAMP`;
+  }
+
+  query += ` WHERE id = $2`;
+  params.push(id);
+
   try {
-    await pool.query(`UPDATE pedidos SET estado = $1 WHERE id = $2`, [estado, id]);
+    await pool.query(query, params);
     res.json({ success: true });
   } catch (err) {
     console.error('❌ Error al cambiar estado:', err);

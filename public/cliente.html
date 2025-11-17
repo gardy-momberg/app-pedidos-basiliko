@@ -24,7 +24,7 @@
     }
 
     .thumbnail {
-      height: 160px;
+      height: 180px;
       border-radius: 12px;
       display: flex;
       flex-direction: column;
@@ -74,6 +74,12 @@
       user-select: none;
     }
 
+    .minutos {
+      font-size: 0.8rem;
+      font-weight: normal;
+      margin-top: 4px;
+    }
+
     button {
       display: block;
       margin: 0 auto 20px auto;
@@ -120,7 +126,14 @@
         alertas.splice(index, 1);
       }
       localStorage.setItem('alertas', JSON.stringify(alertas));
-      cargarPedidos(); // para actualizar icono visualmente
+      cargarPedidos();
+    }
+
+    function calcularMinutos(fecha1, fecha2) {
+      const f1 = new Date(fecha1);
+      const f2 = new Date(fecha2);
+      if (isNaN(f1) || isNaN(f2)) return null;
+      return Math.round((f2 - f1) / 60000);
     }
 
     async function cargarPedidos() {
@@ -132,14 +145,12 @@
       const alertasActivas = JSON.parse(localStorage.getItem('alertas') || '[]');
 
       pedidos.forEach(pedido => {
+        console.log('📦 Pedido recibido:', pedido);
+
         const alertaLocal = alertasActivas.includes(pedido.id);
         const anterior = pedidosPrevios.find(p => p.id === pedido.id);
 
-        if (
-          alertaLocal &&
-          anterior &&
-          anterior.estado !== pedido.estado
-        ) {
+        if (alertaLocal && anterior && anterior.estado !== pedido.estado) {
           mostrarNotificacion(`Pedido #${pedido.id}`, `Estado actualizado: ${pedido.estado}`);
         }
 
@@ -147,13 +158,25 @@
         div.className = `thumbnail ${pedido.estado.replace(' ', '-')}`;
         const icono = alertaLocal ? '🔔' : '🔕';
 
+
+        
+        let minutosHTML = '';
+        if (pedido.estado=='Preparado') {
+          const minutos = calcularMinutos(pedido.fecha_pedido, pedido.fecha_terminado);
+          if (minutos !== null) {
+            minutosHTML = `<div class="minutos">⏱ ${minutos} min</div>`;
+          }
+        }
+
         div.innerHTML = `
           <div class="alerta-icon" onclick="toggleAlerta(${pedido.id})" title="Notificar cambio">${icono}</div>
           <div style="z-index: 1; font-size: 2rem;">#${pedido.id}</div>
           <div style="font-size: 0.9rem;">${pedido.cliente || 'Cliente'}</div>
           <div style="font-size: 0.8rem;">${pedido.productos?.length || 0} productos</div>
+          ${minutosHTML}
           <div class="estado-badge">${pedido.estado}</div>
         `;
+
         contenedor.appendChild(div);
       });
 

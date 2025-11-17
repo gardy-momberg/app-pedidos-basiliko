@@ -112,6 +112,15 @@
   <div id="contenedor-pedidos"></div>
 
   <script>
+    function formatearFecha(fechaISO) {
+      if (!fechaISO) return '—';
+      const fecha = new Date(fechaISO);
+      return fecha.toLocaleString('es-CL', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+      });
+    }
+
     async function cargarPedidos() {
       const res = await fetch('/api/pedidos');
       const pedidos = await res.json();
@@ -129,7 +138,6 @@
         const totalItems = productos.length;
         const cliente = pedido.cliente || '—';
 
-        // Mostrar botones solo si no está "Preparado"
         const botones = pedido.estado !== 'Preparado' ? `
           <div class="acciones">
             <button class="btn preparacion" onclick="actualizarEstado(${pedido.id}, 'En preparación')">En preparación</button>
@@ -143,6 +151,7 @@
             <div class="estado">Estado: ${pedido.estado}</div>
             <div class="detalle">
               👤 Cliente: <strong>${cliente}</strong><br>
+              🕒 Pedido: <strong>${formatearFecha(pedido.fecha_pedido)}</strong><br>
               🍕 Cantidad: <strong>${totalItems}</strong><br>
               📝 Productos: ${nombres || '—'}
             </div>
